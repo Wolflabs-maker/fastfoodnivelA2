@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WOLF LABS // Forensic Nutrition Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Variáveis de Cor - Tema "Forensic Crime Scene" */
+        :root {
+            --bg-base: #09090b; /* Zinc 950 */
+            --bg-panel: #18181b; /* Zinc 900 */
+            --accent-yellow: #eab308; /* Yellow 500 - Fita de Crime */
+            --accent-yellow-hover: #ca8a04;
+            --accent-red: #ef4444; /* Red 500 - Alerta/Crime */
+            --text-main: #f8fafc;
+            --text-muted: #a1a1aa;
+            --error-red: #f87171;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            /* Padrão de fundo estilo scanner forense */
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(239, 68, 68, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 85% 30%, rgba(234, 179, 8, 0.05) 0%, transparent 40%),
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+        }
+
+        .tech-font { font-family: 'Space Mono', monospace; }
+        .yellow-glow { color: var(--accent-yellow); text-shadow: 0 0 15px rgba(234, 179, 8, 0.5); }
+        .red-glow { color: var(--accent-red); text-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
+
+        /* Painéis estilo Dossier Forense */
+        .hud-panel {
+            background: rgba(24, 24, 27, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 4px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8), inset 0 0 20px rgba(239, 68, 68, 0.02);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Mira do Scanner / Viewfinder */
+        .viewfinder {
+            position: absolute; width: 25px; height: 25px; border-color: var(--accent-red); border-style: solid; opacity: 0.8;
+        }
+        .viewfinder.tl { top: 15px; left: 15px; border-width: 3px 0 0 3px; }
+        .viewfinder.tr { top: 15px; right: 15px; border-width: 3px 3px 0 0; }
+        .viewfinder.bl { bottom: 15px; left: 15px; border-width: 0 0 3px 3px; }
+        .viewfinder.br { bottom: 15px; right: 15px; border-width: 0 3px 3px 0; }
+
+        /* Botões de Múltipla Escolha */
+        .choice-btn {
+            background: rgba(9, 9, 11, 0.6);
+            border: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-main);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer; padding: 18px 24px; border-radius: 4px;
+            text-align: left; font-weight: 500; font-size: 1rem;
+            display: flex; align-items: center; gap: 15px;
+            border-left: 3px solid transparent;
+        }
+        .choice-btn::before {
+            content: '\f0c8'; /* square */
+            font-family: 'FontAwesome'; color: var(--text-muted); transition: color 0.2s; font-size: 0.8rem;
+        }
+        .choice-btn:hover:not(.disabled) { 
+            background: #27272a; transform: translateX(5px); border-left-color: rgba(239, 68, 68, 0.5); 
+        }
+        .choice-btn.selected { 
+            background: rgba(239, 68, 68, 0.1); border-color: var(--accent-red); border-left-color: var(--accent-red); color: white; 
+        }
+        .choice-btn.selected::before { content: '\f14a'; /* check-square */ color: var(--accent-red); }
+
+        /* Bug Detector */
+        .bug-word {
+            display: inline-block; padding: 6px 14px; margin: 4px;
+            border-radius: 4px; cursor: pointer; transition: all 0.2s;
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+            font-weight: 600;
+        }
+        .bug-word:hover { background: rgba(255,255,255,0.1); }
+        .bug-word.selected { 
+            background: rgba(234, 179, 8, 0.15); color: var(--accent-yellow); 
+            border: 1px solid var(--accent-yellow); box-shadow: 0 0 10px rgba(234, 179, 8, 0.3); 
+        }
+
+        /* Syntax Builder */
+        .link-node {
+            background: rgba(9, 9, 11, 0.8); border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px 24px; border-radius: 4px; cursor: pointer;
+            transition: 0.2s; font-size: 0.95rem; color: var(--text-main); font-weight: 600;
+        }
+        .link-node:hover { background: #27272a; transform: translateY(-2px); border-color: var(--accent-yellow); }
+        .link-node.selected { background: var(--accent-yellow); color: #000; border-color: var(--accent-yellow); }
+
+        /* Selector Integrado (Inline Toggle) */
+        .inline-btn {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px dashed var(--accent-red);
+            color: var(--accent-red);
+            padding: 4px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Space Mono', monospace;
+            font-weight: bold;
+            display: inline-flex;
+            min-width: 100px;
+            justify-content: center;
+        }
+        .inline-btn:hover { background: rgba(239, 68, 68, 0.2); }
+        .inline-btn.active { 
+            background: var(--accent-red); color: #fff; border-style: solid; 
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); 
+        }
+
+        /* Botão Principal */
+        .primary-btn {
+            background-color: var(--accent-red);
+            color: #fff;
+            border-radius: 4px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+        .primary-btn:hover {
+            background-color: #f87171;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+        }
+
+        /* Barra de Progresso / Fita de Crime */
+        .crime-tape-path { 
+            width: 100%; height: 6px; background: #27272a; position: relative; margin-bottom: 40px; border-radius: 3px; overflow: hidden;
+        }
+        .crime-tape-progress { 
+            position: absolute; top: 0; left: 0; height: 100%; 
+            background: repeating-linear-gradient(45deg, var(--accent-yellow), var(--accent-yellow) 10px, #000 10px, #000 20px);
+            transition: width 0.5s ease; box-shadow: 0 0 10px var(--accent-yellow); 
+        }
+
+        /* Efeitos Visuais */
+        .hide { display: none !important; }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        .fingerprint-bg {
+            position: absolute; right: 10px; top: 10px; opacity: 0.05; font-size: 150px; color: var(--accent-red); pointer-events: none;
+        }
+
+        /* Fita Ticker - Crime Tape */
+        .ticker-wrap { 
+            width: 100%; overflow: hidden; 
+            background: repeating-linear-gradient(45deg, #000, #000 20px, #1a1a1a 20px, #1a1a1a 40px);
+            padding: 8px 0; border-bottom: 2px solid var(--accent-yellow); 
+        }
+        .ticker { display: inline-block; white-space: nowrap; animation: ticker 40s linear infinite; font-size: 0.75rem; color: var(--accent-yellow); font-weight: 800; }
+        @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-red); }
+    </style>
+</head>
+<body class="flex flex-col items-center">
+
+    <!-- Ticker de Crime Tape -->
+    <div class="ticker-wrap tech-font uppercase tracking-widest fixed top-0 z-50">
+        <div class="ticker">
+            CAUTION /// FORENSIC NUTRITION LAB /// INVESTIGATION IN PROGRESS /// ANALYZING CALORIES /// COUNTABLE VS UNCOUNTABLE NOUNS /// SEARCHING FOR EVIDENCE /// CAUTION ///
+        </div>
+    </div>
+
+    <!-- Cabeçalho Principal -->
+    <header class="max-w-6xl mx-auto w-full flex justify-between items-center mt-16 mb-8 pb-6 relative z-10 border-b border-zinc-800 px-4 md:px-8">
+        <div class="flex items-center gap-5">
+            <div class="w-14 h-14 bg-zinc-900 rounded flex items-center justify-center border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                <span class="text-3xl text-red-500"><i class="fa-solid fa-burger"></i></span>
+            </div>
+            <div>
+                <h1 class="text-3xl font-black uppercase tracking-tight text-white">WOLF <span class="red-glow">LABS</span></h1>
+                <p class="text-[0.65rem] tech-font text-zinc-400 uppercase tracking-[0.2em] mt-1">Node A2 • The Fast Food Crime</p>
+            </div>
+        </div>
+        <div class="text-right">
+            <div class="text-[0.65rem] tech-font text-zinc-400 uppercase tracking-widest mb-1">Forensic Accuracy</div>
+            <div class="text-2xl font-bold tech-font text-white" id="accuracy-display">0%</div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto w-full flex-grow flex flex-col relative z-10 px-4 md:px-8">
+        
+        <!-- Abas de Navegação -->
+        <div class="flex gap-3 mb-8 overflow-x-auto pb-2 tech-font">
+            <button onclick="changeNode('lab')" id="tab-lab" class="bg-zinc-900 border border-red-500/50 text-red-400 font-bold px-6 py-2.5 rounded text-xs uppercase tracking-widest hover:bg-zinc-800 transition">01. Evidence Log (Grammar)</button>
+            <button onclick="changeNode('dilemma')" id="tab-dilemma" class="bg-transparent border border-zinc-800 text-zinc-500 font-bold px-6 py-2.5 rounded text-xs uppercase tracking-widest hover:bg-zinc-900 transition">02. Interrogation Room</button>
+            <button onclick="changeNode('vault')" id="tab-vault" class="bg-transparent border border-zinc-800 text-zinc-500 font-bold px-6 py-2.5 rounded text-xs uppercase tracking-widest hover:bg-zinc-900 transition">03. Detective's Report</button>
+        </div>
+
+        <!-- SECÇÃO: LABORATÓRIO DE GRAMÁTICA -->
+        <div id="section-lab" class="hud-panel p-6 md:p-12 fade-in">
+            <div class="viewfinder tl"></div><div class="viewfinder tr"></div>
+            <div class="viewfinder bl"></div><div class="viewfinder br"></div>
+            <i class="fa-solid fa-fingerprint fingerprint-bg"></i>
+
+            <div class="flex justify-between items-end mb-8">
+                <div class="text-[0.75rem] tech-font text-white uppercase tracking-widest font-bold flex items-center gap-2" id="ex-counter">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> EXHIBIT 01/20
+                </div>
+                <div class="text-[0.65rem] tech-font text-yellow-400 uppercase tracking-widest bg-yellow-900/20 border border-yellow-500/30 px-3 py-1 rounded" id="ex-mode">
+                    MODE: LOADING...
+                </div>
+            </div>
+
+            <!-- Crime Tape Progress -->
+            <div class="crime-tape-path">
+                <div class="crime-tape-progress" id="progress-bar" style="width: 5%"></div>
+            </div>
+
+            <div id="lab-container" class="min-h-[300px] flex flex-col justify-center items-center relative z-10">
+                <!-- Overlay Sucesso -->
+                <div id="success-overlay" class="hide absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-20 rounded">
+                    <div class="bg-red-600 text-white font-black py-4 px-10 rounded text-sm uppercase tracking-widest shadow-[0_0_30px_rgba(239,68,68,0.6)] scale-110 transition-transform flex items-center gap-3">
+                        <i class="fa-solid fa-magnifying-glass-chart"></i> EVIDENCE VALIDATED
+                    </div>
+                </div>
+                <div id="lab-content" class="w-full text-center"></div>
+            </div>
+
+            <div class="mt-10 flex flex-col md:flex-row justify-between items-center gap-6 pt-6 border-t border-zinc-800 relative z-10">
+                <div id="undo-hint" class="text-[0.65rem] tech-font text-zinc-500 uppercase opacity-0 transition-opacity">
+                    > Click again to undo selection
+                </div>
+                <div class="flex gap-4 w-full md:w-auto">
+                    <button id="verify-btn" class="hide w-full md:w-auto primary-btn py-3.5 px-10 uppercase text-xs tech-font">Analyze Sample</button>
+                    <button id="next-btn" onclick="nextExercise()" class="hide w-full md:w-auto bg-zinc-800 border border-zinc-700 text-white font-bold py-3.5 px-10 rounded uppercase text-xs hover:border-red-400 hover:text-red-400 transition tech-font">Next Evidence ></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECÇÃO: DILEMAS (INTERROGATION ROOM) -->
+        <div id="section-dilemma" class="hide hud-panel p-8 md:p-12 fade-in">
+            <div class="viewfinder tl"></div><div class="viewfinder tr"></div>
+            <div class="viewfinder bl"></div><div class="viewfinder br"></div>
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-black mb-2 uppercase text-white tracking-tight">Interrogation <span class="red-glow">Room</span></h2>
+                <p class="text-xs text-zinc-400 uppercase tracking-widest tech-font">Health & Fast Food Scenarios</p>
+            </div>
+            <div id="dilemma-list" class="space-y-6 max-w-3xl mx-auto"></div>
+        </div>
+
+        <!-- SECÇÃO: COFRE DIGITAL (DETECTIVE'S REPORT) -->
+        <div id="section-vault" class="hide hud-panel p-8 md:p-12 fade-in">
+            <div class="viewfinder tl"></div><div class="viewfinder tr"></div>
+            <div class="viewfinder bl"></div><div class="viewfinder br"></div>
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-black mb-2 uppercase text-white tracking-tight">Detective's <span class="yellow-glow">Report</span></h2>
+                <p class="text-xs text-zinc-400 uppercase tracking-widest tech-font">Video Homework Mission</p>
+            </div>
+            <div id="vault-list" class="space-y-4 max-w-3xl mx-auto"></div>
+        </div>
+
+    </main>
+
+    <footer class="max-w-6xl mx-auto w-full text-center mt-12 mb-8 opacity-40">
+        <p class="text-[0.6rem] tech-font uppercase tracking-widest text-zinc-300">Wolf Labs // A2 Grammar Engine // The Fast Food Crime Module</p>
+    </footer>
+
+    <script>
+        // DADOS: A2 Countable vs Uncountable Nouns & Quantifiers
+        const exercises = [
+            { 
+                id: 1, 
+                type: 'choice', 
+                q: "UNCOUNTABLE NOUN: How ___ sugar is in this soda?", 
+                options: ["many", "much", "a few"], 
+                a: 1, // 'much'
+                starter: "When I drink soda, I consume too much...",
+                feedback: "Correct! 'Sugar' is uncountable, so we use 'much' in questions."
+            },
+            { 
+                id: 2, 
+                type: 'inline', 
+                q: "COUNTABLE NOUN: The suspect ate too ___ fries yesterday.", 
+                parts: ["I am sure he ate too ", " fries yesterday."],
+                options: ["much", "a little", "many"], 
+                a: 2, // 'many'
+                starter: "I love fast food, but I try not to eat too many...",
+                feedback: "Spot on! 'Fries' are countable, so we use 'many'."
+            },
+            { 
+                id: 3, 
+                type: 'hunt', 
+                q: "BUG DETECTOR: Find the incorrect quantifier in the evidence.", 
+                sentence: ["To", "stay", "healthy,", "you", "need", "to", "drink", "many", "water", "every", "day."], 
+                a: 7, // 'many' -> 'much' / 'a lot of'
+                starter: "Every day, I try to drink a lot of...",
+                feedback: "Bug caught! 'Water' is uncountable. You cannot use 'many'. You should use 'much' or 'a lot of'."
+            },
+            { 
+                id: 4, 
+                type: 'link', 
+                q: "SYNTAX BUILDER: Reconstruct the detective's notes about the soup.", 
+                nodes: [["There", "Their"], ["are", "is"], ["too", "to"], ["much", "many"], ["salt"], ["in", "on"], ["this"], ["soup."]], 
+                a: ["There", "is", "too", "much", "salt", "in", "this", "soup."],
+                starter: "I don't like restaurant food when there is too much...",
+                feedback: "Evidence assembled! 'Salt' is uncountable, taking a singular verb 'is' and the quantifier 'much'."
+            },
+            { 
+                id: 5, 
+                type: 'choice', 
+                q: "UNCOUNTABLE NOUN: Ordering food at the crime scene.", 
+                options: ["Can I have a few ketchup, please?", "Can I have many ketchup, please?", "Can I have a little ketchup, please?"], 
+                a: 2,
+                starter: "With my burger, I always ask for a little...",
+                feedback: "Correct! Ketchup is a liquid/paste (uncountable), so we use 'a little', not 'a few'."
+            },
+            { 
+                id: 6, 
+                type: 'inline', 
+                q: "ABSTRACT NOUN: The doctor's statement.", 
+                parts: ["The doctor gave the suspect some good ", " about his diet."],
+                options: ["advices", "advice", "an advice"], 
+                a: 1, // 'advice'
+                starter: "The best advice I received about my health was...",
+                feedback: "Good eye! 'Advice' is an uncountable concept in English. It never takes an 's' or 'an'."
+            },
+            { 
+                id: 7, 
+                type: 'hunt', 
+                q: "BUG DETECTOR: Spot the error in the timeline.", 
+                sentence: ["We", "have", "a", "few", "time", "left", "before", "the", "restaurant", "closes."], 
+                a: 3, // 'few' -> 'little'
+                starter: "When I have a little free time, I usually...",
+                feedback: "Wait! 'Time' is uncountable. We must use 'a little time', not 'a few time'."
+            },
+            { 
+                id: 8, 
+                type: 'link', 
+                q: "SYNTAX BUILDER: Form the investigator's question.", 
+                nodes: [["How"], ["much", "many"], ["calories"], ["is", "are"], ["in", "on"], ["that"], ["burger?"]], 
+                a: ["How", "many", "calories", "are", "in", "that", "burger?"],
+                starter: "I don't usually count how many...",
+                feedback: "Excellent. 'Calories' are countable, so we use 'How many'."
+            },
+            { 
+                id: 9, 
+                type: 'choice', 
+                q: "NEGATIVE SENTENCES: The suspect's alibi.", 
+                options: ["I swear, I don't eat many fast food.", "I swear, I don't eat much fast food.", "I swear, I don't eat a few fast food."], 
+                a: 1,
+                starter: "During the week, I don't eat much...",
+                feedback: "Correct! 'Fast food' as a general category is uncountable, requiring 'much' in negative sentences."
+            },
+            { 
+                id: 10, 
+                type: 'inline', 
+                q: "COUNTABLE NOUN: The missing evidence.", 
+                parts: ["There are only ", " cookies left in the jar. Who ate them?"],
+                options: ["a little", "much", "a few"], 
+                a: 2, // 'a few'
+                starter: "For dessert, I like to have a few...",
+                feedback: "Exactly. 'Cookies' are countable items, so we use 'a few'."
+            },
+            { 
+                id: 11, 
+                type: 'hunt', 
+                q: "BUG DETECTOR: Find the fatal error in the recipe.", 
+                sentence: ["She", "ruined", "the", "meal", "because", "she", "put", "too", "many", "salt", "on", "it."], 
+                a: 8, // 'many' -> 'much'
+                starter: "I think fast food chains put too much...",
+                feedback: "Caught it! 'Salt' is uncountable. You must use 'too much'."
+            },
+            { 
+                id: 12, 
+                type: 'link', 
+                q: "SYNTAX BUILDER: The nutritionist's prescription.", 
+                nodes: [["We", "Us"], ["needs", "need"], ["some", "any"], ["fresh"], ["vegetables"], ["for"], ["dinner."]], 
+                a: ["We", "need", "some", "fresh", "vegetables", "for", "dinner."],
+                feedback: "Valid structure. We use 'some' in affirmative sentences for plural countable nouns like 'vegetables'."
+            },
+            { 
+                id: 13, 
+                type: 'choice', 
+                q: "UNCOUNTABLE NOUN: Financial motives.", 
+                options: ["I have few money, so I can't buy the large pizza.", "I have little money, so I can't buy the large pizza.", "I have many money, so I can't buy the large pizza."], 
+                a: 1,
+                feedback: "Correct! 'Money' is uncountable in English. To say you have almost zero, you use 'little'."
+            },
+            { 
+                id: 14, 
+                type: 'inline', 
+                q: "QUESTIONS: Interrogating the suspect.", 
+                parts: ["Tell the truth! How ", " slices of pizza did you eat?"],
+                options: ["much", "many", "a little"], 
+                a: 1, // 'many'
+                feedback: "Correct. 'Slices' are countable (1 slice, 2 slices), so we ask 'How many'."
+            },
+            { 
+                id: 15, 
+                type: 'hunt', 
+                q: "BUG DETECTOR: Negative statements with uncountable nouns.", 
+                sentence: ["The", "victim", "complained:", "\"There", "isn't", "many", "cheese", "on", "this", "hamburger!\""], 
+                a: 5, // 'many' -> 'much'
+                feedback: "Bug fixed! 'Cheese' is uncountable. In a negative sentence, it must be 'isn't much cheese'."
+            },
+            { 
+                id: 16, 
+                type: 'link', 
+                q: "SYNTAX BUILDER: Healthy habits.", 
+                nodes: [["Drink", "Drinks"], ["a"], ["few", "little"], ["water"], ["with"], ["your"], ["meal."]], 
+                a: ["Drink", "a", "little", "water", "with", "your", "meal."],
+                feedback: "'Water' is an uncountable liquid. 'A little' means a small, positive amount."
+            },
+            { 
+                id: 17, 
+                type: 'choice', 
+                q: "COUNTABLE NOUN: Analyzing the menu.", 
+                options: ["There are very few healthy options on this menu.", "There are very little healthy options on this menu.", "There are very much healthy options on this menu."], 
+                a: 0,
+                feedback: "Very good! 'Options' are countable. 'Very few' means almost none."
+            },
+            { 
+                id: 18, 
+                type: 'inline', 
+                q: "OFFERS & REQUESTS: The café interrogation.", 
+                parts: ["Would you like ", " sugar in your black coffee?"],
+                options: ["many", "a few", "some"], 
+                a: 2, // 'some'
+                feedback: "Correct! Even though it's a question, we use 'some' when we are making an offer (offering sugar)."
+            },
+            { 
+                id: 19, 
+                type: 'hunt', 
+                q: "BUG DETECTOR: Negative sentences and 'any'.", 
+                sentence: ["I'm", "sorry,", "but", "I", "don't", "have", "some", "information", "about", "the", "ingredients."], 
+                a: 6, // 'some' -> 'any'
+                feedback: "Exactly. In negative sentences, we generally change 'some' to 'any' (don't have any information)."
+            },
+            { 
+                id: 20, 
+                type: 'link', 
+                q: "SYNTAX BUILDER: The final verdict.", 
+                nodes: [["This", "These"], ["diet"], ["contain", "contains"], ["too", "to"], ["much", "many"], ["fat."]], 
+                a: ["This", "diet", "contains", "too", "much", "fat."],
+                feedback: "Case closed! 'Fat' is an uncountable noun, requiring 'too much'."
+            }
+        ];
+
+        // Dilemas: Interrogation Room (Health & Fast Food)
+        const dilemmas = [
+            { title: "THE SUSPECT'S LUNCH", q: "You are a health detective examining a suspect's lunch bag. It contains 3 burgers, 2 large fries, and a giant soda. Advise them using quantifiers (too much / too many).", starters: ["Looking at your lunch, you are eating too many...", "I also noticed there is too much...", "For a healthier option, you should add a few..."] },
+            { title: "THE RESTAURANT INQUIRY", q: "You are ordering food but you want to be healthy. Act as the detective and ask the waiter questions about the ingredients (sugar, calories, salt).", starters: ["Excuse me, how much...", "Can you tell me how many...", "I would like to order this, but with very little..."] },
+            { title: "THE NUTRITIONIST'S PLEA", q: "A friend complains they have very little energy. You know they eat fast food every day. Give them some advice.", starters: ["I have some advice for you: you eat too much...", "If you want more energy, drink a lot of...", "You should also try to eat a few..."] }
+        ];
+
+        // Cofre: Detective's Report (Video Homework)
+        const vaultQuestions = [
+            { q: "Task: Record a 2-minute video opening your fridge/pantry and describing the 'Evidence' inside.", s: "Use your phone to record. Point to the food items as you speak." },
+            { q: "Grammar Requirement 1: Use 3 Countable nouns with quantifiers.", s: "Example: \"I have a few apples.\" / \"There aren't many eggs.\"" },
+            { q: "Grammar Requirement 2: Use 3 Uncountable nouns with quantifiers.", s: "Example: \"There is a little milk left.\" / \"I don't have much sugar.\"" },
+            { q: "Format:", s: "Upload the video to the WOLF Portal before the next session." }
+        ];
+
+        let currentIdx = 0;
+        let score = 0;
+        let selectedIndices = [];
+        let selectedBug = null;
+        let selectedChoice = null;
+
+        const labContent = document.getElementById('lab-content');
+        const verifyBtn = document.getElementById('verify-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const accuracyText = document.getElementById('accuracy-display');
+        const undoHint = document.getElementById('undo-hint');
+        const successOverlay = document.getElementById('success-overlay');
+
+        function init() {
+            // Algoritmo Fisher-Yates para baralhar os exercícios a 100% de forma aleatória
+            shuffleFisherYates(exercises);
+            
+            renderExercise();
+            renderVault();
+            renderDilemmas();
+            changeNode('lab');
+        }
+
+        // Função robusta de embaralhamento (Fisher-Yates)
+        function shuffleFisherYates(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Embaralhar opções e sintaxe
+        function shuffle(array) {
+            return shuffleFisherYates([...array]); // Retorna uma nova array embaralhada para os botões
+        }
+
+        function renderExercise() {
+            const ex = exercises[currentIdx];
+            if (!labContent) return;
+            labContent.innerHTML = '';
+            verifyBtn.classList.add('hide');
+            nextBtn.classList.add('hide');
+            undoHint.classList.add('opacity-0');
+            successOverlay.classList.add('hide');
+            
+            selectedIndices = [];
+            selectedBug = null;
+            selectedChoice = null;
+
+            // Mostrar sempre a progressão sequencial
+            document.getElementById('ex-counter').innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> EXHIBIT ${String(currentIdx + 1).padStart(2, '0')}/${exercises.length}`;
+            
+            let modeName = "MULTIPLE CHOICE";
+            if(ex.type === 'hunt') modeName = "BUG DETECTOR";
+            if(ex.type === 'link') modeName = "SYNTAX BUILDER";
+            if(ex.type === 'inline') modeName = "INLINE SELECTOR";
+            document.getElementById('ex-mode').innerText = `MODE: ${modeName}`;
+            
+            progressBar.style.width = `${((currentIdx) / exercises.length) * 100}%`;
+
+            let html = `<h2 class="text-xl md:text-2xl font-bold mb-8 text-white max-w-2xl mx-auto leading-relaxed whitespace-pre-line">${ex.q}</h2>`;
+
+            // Renderizar Selector Integrado (Inline)
+            if(ex.type === 'inline') {
+                html += `<div class="text-xl md:text-2xl font-medium leading-loose mt-4 bg-black/40 p-6 rounded border border-zinc-800 shadow-inner max-w-2xl mx-auto text-white flex flex-wrap items-center justify-center gap-2">
+                    <span>${ex.parts[0]}</span>
+                    <button id="inline-btn" class="inline-btn" data-idx="-1" onclick="cycleInline(this)">[...]</button>
+                    <span>${ex.parts[1]}</span>
+                </div>`;
+            } else if(ex.type === 'choice') {
+                let shuffledOptions = ex.options.map((opt, i) => ({ text: opt, originalIdx: i }));
+                shuffledOptions = shuffle(shuffledOptions);
+                html += `<div class="grid grid-cols-1 gap-3 w-full max-w-xl mx-auto">`;
+                shuffledOptions.forEach((optObj) => {
+                    html += `<button onclick="handleChoice(${optObj.originalIdx}, this)" class="choice-btn tech-font text-sm md:text-base">${optObj.text}</button>`;
+                });
+                html += `</div>`;
+            } else if(ex.type === 'hunt') {
+                html += `<div class="text-xl font-medium leading-loose mt-4 bg-black/40 p-6 rounded border border-zinc-800 shadow-inner max-w-2xl mx-auto">`;
+                ex.sentence.forEach((word, i) => {
+                    html += `<span onclick="handleBug(${i}, this)" class="bug-word">${word}</span>`;
+                });
+                html += `</div>`;
+            } else if(ex.type === 'link') {
+                html += `<div class="flex flex-wrap justify-center gap-3 w-full mt-4 bg-black/40 p-8 rounded border border-zinc-800 max-w-3xl mx-auto">`;
+                ex.nodes.forEach((group, gIdx) => {
+                    let shuffledGroup = group.map((node, i) => ({ text: node, originalIdx: i }));
+                    shuffledGroup = shuffle(shuffledGroup);
+                    html += `<div class="flex flex-col gap-2">`;
+                    shuffledGroup.forEach((nodeObj) => {
+                        html += `<div onclick="handleLink(${gIdx}, ${nodeObj.originalIdx}, this)" class="link-node">${nodeObj.text}</div>`;
+                    });
+                    html += `</div>`;
+                });
+                html += `</div>`;
+            }
+
+            labContent.innerHTML = html;
+        }
+
+        // Lógica Botão Inline
+        function cycleInline(el) {
+            const ex = exercises[currentIdx];
+            let idx = parseInt(el.getAttribute('data-idx'));
+            idx = (idx + 1) % ex.options.length;
+            el.setAttribute('data-idx', idx);
+            el.innerText = ex.options[idx];
+            el.classList.add('active');
+            selectedChoice = idx;
+            verifyBtn.classList.remove('hide');
+            verifyBtn.onclick = verifyInline;
+            undoHint.classList.remove('opacity-0');
+        }
+
+        // Lógica Múltipla Escolha
+        function handleChoice(i, el) {
+            const all = document.querySelectorAll('.choice-btn');
+            if(selectedChoice === i) {
+                selectedChoice = null; el.classList.remove('selected'); verifyBtn.classList.add('hide'); undoHint.classList.add('opacity-0');
+            } else {
+                all.forEach(e => e.classList.remove('selected')); el.classList.add('selected'); selectedChoice = i;
+                verifyBtn.classList.remove('hide'); verifyBtn.onclick = verifyChoice; undoHint.classList.remove('opacity-0');
+            }
+        }
+
+        // Lógica Bug Detector
+        function handleBug(i, el) {
+            const all = document.querySelectorAll('.bug-word');
+            if(selectedBug === i) {
+                selectedBug = null; el.classList.remove('selected'); verifyBtn.classList.add('hide'); undoHint.classList.add('opacity-0');
+            } else {
+                all.forEach(e => e.classList.remove('selected')); el.classList.add('selected'); selectedBug = i;
+                verifyBtn.classList.remove('hide'); verifyBtn.onclick = verifyBug; undoHint.classList.remove('opacity-0');
+            }
+        }
+
+        // Lógica Syntax Builder
+        function handleLink(gIdx, originalIdx, el) {
+            const groupEls = el.parentElement.querySelectorAll('.link-node');
+            if(selectedIndices[gIdx] === originalIdx) {
+                el.classList.remove('selected'); selectedIndices[gIdx] = undefined;
+            } else {
+                groupEls.forEach(e => e.classList.remove('selected')); el.classList.add('selected'); selectedIndices[gIdx] = originalIdx;
+            }
+            const allSet = selectedIndices.filter(x => x !== undefined).length === exercises[currentIdx].nodes.length;
+            verifyBtn.classList.toggle('hide', !allSet);
+            undoHint.classList.toggle('opacity-0', !selectedIndices.some(x => x !== undefined));
+            if(allSet) verifyBtn.onclick = verifyLink;
+        }
+
+        // Funções Validação
+        function verifyInline() { finishEx(selectedChoice === exercises[currentIdx].a); }
+        function verifyChoice() { finishEx(selectedChoice === exercises[currentIdx].a); }
+        function verifyBug() { finishEx(selectedBug === exercises[currentIdx].a); }
+        function verifyLink() {
+            const ex = exercises[currentIdx];
+            const isCorrect = selectedIndices.every((val, i) => val === ex.nodes[i].indexOf(ex.a[i]));
+            finishEx(isCorrect);
+        }
+
+        // Feedback / Finalizar
+        function finishEx(isCorrect) {
+            verifyBtn.classList.add('hide');
+            undoHint.classList.add('opacity-0');
+            const ex = exercises[currentIdx];
+
+            if(isCorrect) {
+                triggerSuccess();
+                updateAccuracy(1);
+                let feedbackHtml = `
+                    <div class="mt-8 fade-in text-left max-w-2xl mx-auto">
+                        <div class="bg-zinc-900 border-l-4 border-red-500 p-5 rounded-r">
+                            <span class="text-[0.65rem] font-bold text-red-400 uppercase tracking-widest block mb-2 tech-font">Lab Analysis:</span>
+                            <p class="text-sm text-zinc-300">${ex.feedback || 'Syntax valid. Proceed to next exhibit.'}</p>
+                        </div>
+                `;
+                if(ex.starter) {
+                    feedbackHtml += `
+                        <div class="bg-gradient-to-r from-red-900/20 to-transparent border-l-2 border-red-500 p-4 rounded-r mt-4 text-left">
+                            <span class="text-[0.6rem] font-bold text-white uppercase tracking-widest block mb-2 tech-font">Speaking Starter:</span>
+                            <p class="text-sm italic text-zinc-400">"> ${ex.starter}"</p>
+                        </div>
+                    `;
+                }
+                feedbackHtml += `</div>`;
+                labContent.innerHTML += feedbackHtml;
+            } else {
+                const labPanel = document.getElementById('section-lab');
+                labPanel.style.border = "1px solid #ef4444"; 
+                setTimeout(() => labPanel.style.border = "1px solid rgba(239, 68, 68, 0.2)", 1000);
+            }
+            nextBtn.classList.remove('hide');
+        }
+
+        // Animação de sucesso
+        function triggerSuccess() {
+            successOverlay.classList.remove('hide');
+            setTimeout(() => successOverlay.classList.add('hide'), 800);
+        }
+
+        // Pontuação
+        function updateAccuracy(pts) { score += pts; accuracyText.innerText = `${Math.round((score / exercises.length) * 100)}%`; }
+
+        function nextExercise() {
+            currentIdx++;
+            if(currentIdx < exercises.length) renderExercise();
+            else finishLab();
+        }
+
+        // Fim da viagem
+        function finishLab() {
+            labContent.innerHTML = `
+                <div class="text-center py-12 fade-in">
+                    <i class="fa-solid fa-file-signature text-6xl text-red-500 mb-6"></i>
+                    <h1 class="text-5xl font-black text-white mb-6 uppercase tracking-tighter">CASE <span class="text-red-500">CLOSED</span></h1>
+                    <p class="text-zinc-400 mb-10 max-w-md mx-auto text-sm leading-relaxed">Mission accomplished. You have successfully mastered <strong>Countable and Uncountable Nouns</strong> and their quantifiers. You are now ready to investigate diets and healthy habits.</p>
+                    <button onclick="changeNode('dilemma')" class="primary-btn py-4 px-12 text-sm tech-font">Enter Interrogation Room</button>
+                </div>`;
+            progressBar.style.width = "100%";
+        }
+
+        // Renderizar Roleplay
+        function renderDilemmas() {
+            const container = document.getElementById('dilemma-list');
+            if (!container) return;
+            dilemmas.forEach((d, i) => {
+                const div = document.createElement('div');
+                div.className = 'bg-zinc-900 hover:bg-zinc-800 transition border border-zinc-800 p-8 rounded fade-in';
+                div.innerHTML = `
+                    <div class="flex items-center gap-4 mb-5">
+                        <span class="bg-red-900/30 text-red-400 border border-red-500/30 tech-font font-bold px-3 py-1 text-[0.65rem] rounded uppercase tracking-widest">SCENARIO 0${i+1}</span>
+                        <h3 class="text-xl font-bold text-white uppercase">${d.title}</h3>
+                    </div>
+                    <p class="text-zinc-300 mb-6 text-sm leading-relaxed">${d.q}</p>
+                    <div class="bg-black/30 p-5 rounded border border-white/5">
+                        <span class="text-[0.65rem] text-zinc-500 uppercase tracking-widest block mb-3 font-bold tech-font">Detective's Toolkit:</span>
+                        <ul class="text-sm text-zinc-400 italic space-y-3">
+                            ${d.starters.map(s => `<li><span class="text-red-500 font-bold mr-2">></span>${s}</li>`).join('')}
+                        </ul>
+                    </div>`;
+                container.appendChild(div);
+            });
+        }
+
+        // Renderizar Homework (Vault)
+        function renderVault() {
+            const list = document.getElementById('vault-list');
+            if (!list) return;
+            vaultQuestions.forEach((v, i) => {
+                const item = document.createElement('div');
+                item.className = 'bg-zinc-900 p-6 rounded fade-in flex flex-col md:flex-row gap-6 items-start md:items-center hover:bg-zinc-800 transition border border-zinc-800';
+                item.style.animationDelay = `${i * 0.05}s`;
+                item.innerHTML = `
+                    <div class="w-12 h-12 bg-black rounded border border-zinc-700 flex items-center justify-center flex-shrink-0 text-white shadow-inner">
+                        <i class="fa-solid fa-video text-yellow-500"></i>
+                    </div>
+                    <div class="flex-grow">
+                        <p class="text-white font-bold mb-2 text-sm">${v.q}</p>
+                        <p class="text-xs text-zinc-400 tech-font">Info: <span class="italic text-zinc-500">"${v.s}"</span></p>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // Alternar Tabs
+        function changeNode(mode) {
+            document.querySelectorAll('.hud-panel').forEach(p => p.classList.add('hide'));
+            document.querySelectorAll('button[id^="tab-"]').forEach(b => {
+                b.classList.remove('border-red-500/50', 'text-red-400', 'bg-zinc-900');
+                b.classList.add('border-zinc-800', 'text-zinc-500', 'bg-transparent');
+            });
+            const targetSection = document.getElementById(`section-${mode}`);
+            const targetTab = document.getElementById(`tab-${mode}`);
+            if (targetSection) targetSection.classList.remove('hide');
+            if (targetTab) {
+                targetTab.classList.remove('border-zinc-800', 'text-zinc-500', 'bg-transparent');
+                targetTab.classList.add('border-red-500/50', 'text-red-400', 'bg-zinc-900');
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
